@@ -2,10 +2,15 @@ package zqz.spring;
 
 import java.io.File;
 import java.net.URL;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ApplicationContext {
 
     private Class configClass;
+
+    private Map<String, Object> singletonMap = new ConcurrentHashMap<>();
+    private Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
 
     public ApplicationContext(Class configClass) {
         this.configClass = configClass;
@@ -36,9 +41,24 @@ public class ApplicationContext {
                         className = className.replace("\\", ".");
                         System.out.println(className);
                         try {
-                            Class<?> clazz = classLoader.loadClass(f.getName());
+                            Class<?> clazz = classLoader.loadClass(className);
                             if (clazz.isAnnotationPresent(Component.class)) {
-                                // 如果有component注解，则表示当前类是一个bean
+                                // 如果有component注解，则表示当前类是一个bean，分单例bean和原型(prototype)bean。
+                                // 解析类----> BeanDefinition
+                                Component componentAnnotation = clazz.getDeclaredAnnotation(Component.class);
+                                String beanName = componentAnnotation.value();
+
+                                BeanDefinition beanDefinition = new BeanDefinition();
+
+                                // 如果存在scope注解，说明是原型对象，非单例
+                                if (clazz.isAnnotationPresent(Scope.class)) {
+                                    Scope scopeAnnotation = clazz.getDeclaredAnnotation(Scope.class);
+                                    // 否则是单例对象
+                                    beanDefinition.setScope(scopeAnnotation.value());
+                                } else {
+                                    beanDefinition.setScope("singleton");
+                                }
+
 
                             }
                         } catch (ClassNotFoundException e) {
