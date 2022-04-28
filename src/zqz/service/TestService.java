@@ -4,7 +4,7 @@ import zqz.spring.Component;
 import zqz.spring.Scope;
 
 @Component("TestService")
-@Scope("prototype")
+// @Scope("prototype")  // 控制单例还是原型
 public class TestService {
 
 

@@ -1,6 +1,7 @@
 package zqz.spring;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,15 +10,47 @@ public class ApplicationContext {
 
     private Class configClass;
 
+    // 单例bean map
     private Map<String, Object> singletonMap = new ConcurrentHashMap<>();
+    // bean definition map
     private Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
 
     public ApplicationContext(Class configClass) {
         this.configClass = configClass;
 
-        // 扫描配置类componentScan注解
+        // 扫描componentScan路径--> 扫描component对象 --> beanDefinition --> beanDefinitionMap
+        scan(configClass);
+
+        // 创建单例bean
+        for (String beanName : beanDefinitionMap.keySet()) {
+            BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+            if (beanDefinition.getScope().equals("singleton")) {
+                Object bean = createBean(beanDefinition);
+                singletonMap.put(beanName, beanDefinition);
+            }
+        }
+    }
+
+    public Object createBean(BeanDefinition beanDefinition) {
+        Class clazz = beanDefinition.getClazz();
+        Object instance = null;
+        try {
+            instance = clazz.getDeclaredConstructor().newInstance();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+        return instance;
+    }
+
+    private void scan(Class configClass) {
         if (configClass.isAnnotationPresent(ComponentScan.class)) {
-            ComponentScan componentScan = (ComponentScan)configClass.getAnnotation(ComponentScan.class);
+            ComponentScan componentScan = (ComponentScan) configClass.getAnnotation(ComponentScan.class);
             // 得到扫描路径
             String path = componentScan.value();
             path = path.replace("." , "/");
@@ -47,9 +80,8 @@ public class ApplicationContext {
                                 // 解析类----> BeanDefinition
                                 Component componentAnnotation = clazz.getDeclaredAnnotation(Component.class);
                                 String beanName = componentAnnotation.value();
-
                                 BeanDefinition beanDefinition = new BeanDefinition();
-
+                                beanDefinition.setClazz(clazz);
                                 // 如果存在scope注解，说明是原型对象，非单例
                                 if (clazz.isAnnotationPresent(Scope.class)) {
                                     Scope scopeAnnotation = clazz.getDeclaredAnnotation(Scope.class);
@@ -58,22 +90,29 @@ public class ApplicationContext {
                                 } else {
                                     beanDefinition.setScope("singleton");
                                 }
-
-
+                                beanDefinitionMap.put(beanName, beanDefinition);
                             }
                         } catch (ClassNotFoundException e) {
                             e.printStackTrace();
                         }
-
                     }
-
                 }
             }
         }
     }
 
-    public Object getBean(String beanName) {
-
-        return null;
+    public Object getBean(String beanName) throws Exception {
+        if (beanDefinitionMap.containsKey(beanName)) {
+            BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+            // 单例bean到单例池去取对象
+            if (beanDefinition.getScope().equals("singleton")) {
+                return singletonMap.get(beanName);
+                // 原型bean则创建对象
+            } else {
+                return createBean(beanDefinitionMap.get(beanName));
+            }
+        } else {
+            throw new Exception("没有对应的bean");
+        }
     }
 }
