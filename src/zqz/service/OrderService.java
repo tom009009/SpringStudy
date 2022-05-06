@@ -2,7 +2,7 @@ package zqz.service;
 
 import spring.Component;
 
-@Component("OrderService")
+@Component("orderService")
 public class OrderService {
 
 

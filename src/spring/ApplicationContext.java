@@ -1,6 +1,7 @@
 package spring;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.Map;
@@ -15,7 +16,7 @@ public class ApplicationContext {
     // bean definition map
     private Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
 
-    public ApplicationContext(Class configClass) {
+    public ApplicationContext(Class configClass) throws Exception {
         this.configClass = configClass;
 
         // 扫描componentScan路径--> 扫描component对象 --> beanDefinition --> beanDefinitionMap
@@ -26,16 +27,27 @@ public class ApplicationContext {
             BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
             if (beanDefinition.getScope().equals("singleton")) {
                 Object bean = createBean(beanDefinition);
-                singletonMap.put(beanName, beanDefinition);
+                singletonMap.put(beanName, bean);
             }
         }
     }
 
-    public Object createBean(BeanDefinition beanDefinition) {
+    public Object createBean(BeanDefinition beanDefinition) throws Exception {
         Class clazz = beanDefinition.getClazz();
         Object instance = null;
         try {
             instance = clazz.getDeclaredConstructor().newInstance();
+
+            // 依赖注入
+            for (Field field : clazz.getDeclaredFields()) {
+                // 如果字段上有Autowired注解，则需要赋值
+                if(field.isAnnotationPresent(Autowired.class)) {
+                    Object filedBean = getBean(field.getName());
+                    field.setAccessible(true);
+                    field.set(instance, filedBean);
+                }
+            }
+
         } catch (InstantiationException e) {
             e.printStackTrace();
         } catch (IllegalAccessException e) {
@@ -67,7 +79,7 @@ public class ApplicationContext {
                 File[] files = file.listFiles();
                 for (File f : files) {
                     // 需要把的class  D:\workspace\IDEAworkspace\SpringStudy\out\production\SpringStudy\zqz\service\UserService.class
-                    // 修改为 zqz.service.UserService
+                      // 修改为 zqz.service.UserService
                     String fileName = f.getAbsolutePath();
                     if (fileName.endsWith(".class")) {
                         String className = fileName.substring(fileName.indexOf("zqz"), fileName.indexOf(".class"));

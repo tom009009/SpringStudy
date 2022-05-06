@@ -7,9 +7,12 @@ public class Test {
     public static void main(String[] args) throws Exception {
 
         ApplicationContext app = new ApplicationContext(AppConfig.class);
-        Object userService = app.getBean("UserService");
-        System.out.println(userService);
-        System.out.println(app.getBean("UserService"));
+        UserService userService = (UserService)app.getBean("userService");
+        userService.test();
+
+//        System.out.println(userService);
+//        // 这里一定会和上面的UserService是一个对象，因为声明了单例对象
+//        System.out.println(app.getBean("UserService"));
     }
 
 }
