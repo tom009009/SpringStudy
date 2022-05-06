@@ -1,4 +1,4 @@
-package zqz.spring;
+package spring;
 
 public class BeanDefinition {
 

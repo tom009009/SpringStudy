@@ -1,4 +1,4 @@
-package zqz.spring;
+package spring;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -66,8 +66,8 @@ public class ApplicationContext {
             if (file.isDirectory()) {
                 File[] files = file.listFiles();
                 for (File f : files) {
-                    // 需要把的class  D:\workspace\IDEAworkspace\SpringStudy\out\production\SpringStudy\zqz\service\TestService.class
-                    // 修改为 zqz.service.TestService
+                    // 需要把的class  D:\workspace\IDEAworkspace\SpringStudy\out\production\SpringStudy\zqz\service\UserService.class
+                    // 修改为 zqz.service.UserService
                     String fileName = f.getAbsolutePath();
                     if (fileName.endsWith(".class")) {
                         String className = fileName.substring(fileName.indexOf("zqz"), fileName.indexOf(".class"));
