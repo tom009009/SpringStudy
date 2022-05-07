@@ -1,4 +1,4 @@
-package zqz.service;
+package zqz;
 
 import spring.ComponentScan;
 

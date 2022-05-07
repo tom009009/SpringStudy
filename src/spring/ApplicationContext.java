@@ -26,13 +26,13 @@ public class ApplicationContext {
         for (String beanName : beanDefinitionMap.keySet()) {
             BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
             if (beanDefinition.getScope().equals("singleton")) {
-                Object bean = createBean(beanDefinition);
+                Object bean = createBean(beanName, beanDefinition);
                 singletonMap.put(beanName, bean);
             }
         }
     }
 
-    public Object createBean(BeanDefinition beanDefinition) throws Exception {
+    public Object createBean(String beanName, BeanDefinition beanDefinition) throws Exception {
         Class clazz = beanDefinition.getClazz();
         Object instance = null;
         try {
@@ -47,6 +47,18 @@ public class ApplicationContext {
                     field.set(instance, filedBean);
                 }
             }
+
+            // Aware回调
+            if (instance instanceof BeanNameAware) {
+                ((BeanNameAware)instance).setBeanName(beanName);
+            }
+
+            // 初始化
+            if (instance instanceof InitializingBean) {
+                ((InitializingBean)instance).afterPropertiesSet();
+            }
+
+            // BeanPostProcessor
 
         } catch (InstantiationException e) {
             e.printStackTrace();
@@ -66,7 +78,7 @@ public class ApplicationContext {
             // 得到扫描路径
             String path = componentScan.value();
             path = path.replace("." , "/");
-            System.out.println("得到的路径为：" + path);
+            System.out.println("scanclass得到的路径为：" + path);
 
             // 需要扫描class文件,类加载器三种：
             // 1,BootStrap : Jre/lib
@@ -121,7 +133,7 @@ public class ApplicationContext {
                 return singletonMap.get(beanName);
                 // 原型bean则创建对象
             } else {
-                return createBean(beanDefinitionMap.get(beanName));
+                return createBean(beanName, beanDefinitionMap.get(beanName));
             }
         } else {
             throw new Exception("没有对应的bean");

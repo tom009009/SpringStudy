@@ -1,6 +1,7 @@
-package zqz.service;
+package zqz;
 
 import spring.ApplicationContext;
+import zqz.service.UserService;
 
 public class Test {
 
