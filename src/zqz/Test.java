@@ -2,13 +2,14 @@ package zqz;
 
 import spring.ApplicationContext;
 import zqz.service.UserService;
+import zqz.service.UserServiceInf;
 
 public class Test {
 
     public static void main(String[] args) throws Exception {
 
         ApplicationContext app = new ApplicationContext(AppConfig.class);
-        UserService userService = (UserService)app.getBean("userService");
+        UserServiceInf userService = (UserServiceInf)app.getBean("userService");
         userService.test();
 
 //        System.out.println(userService);

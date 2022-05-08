@@ -4,6 +4,8 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -15,6 +17,8 @@ public class ApplicationContext {
     private Map<String, Object> singletonMap = new ConcurrentHashMap<>();
     // bean definition map
     private Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
+    // BeanPostProcessor
+    private List<BeanPostProcessor> beanPostProcessorList = new ArrayList<>();
 
     public ApplicationContext(Class configClass) throws Exception {
         this.configClass = configClass;
@@ -53,12 +57,21 @@ public class ApplicationContext {
                 ((BeanNameAware)instance).setBeanName(beanName);
             }
 
+            // 调用BeanPostProcessor的初始化前
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
+                instance = beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
+            }
+
             // 初始化
             if (instance instanceof InitializingBean) {
                 ((InitializingBean)instance).afterPropertiesSet();
             }
 
-            // BeanPostProcessor
+            // 调用BeanPostProcessor的初始化后
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
+                instance = beanPostProcessor.postProcessAfterInitialization(instance, beanName);
+            }
+
 
         } catch (InstantiationException e) {
             e.printStackTrace();
@@ -100,6 +113,15 @@ public class ApplicationContext {
                         try {
                             Class<?> clazz = classLoader.loadClass(className);
                             if (clazz.isAnnotationPresent(Component.class)) {
+
+                                // 首先要判断是否是beanPostProcessor,在这里不能用instanceof，因为instanceof是判断一个具体的实例对象(instance)是不是某一个类或者某一个接口
+                                // 而这里的实例对象是Class对象，不能用，需要用下面的逻辑来判断是否是BeanPostProcessor
+                                if (BeanPostProcessor.class.isAssignableFrom(clazz)) {
+                                    // 真正的spring源码这里用的是getBean方法，这里只是简单实现
+                                    BeanPostProcessor beanPostProcessor = (BeanPostProcessor)clazz.getDeclaredConstructor().newInstance();
+                                    beanPostProcessorList.add(beanPostProcessor);
+                                }
+
                                 // 如果有component注解，则表示当前类是一个bean，分单例bean和原型(prototype)bean。
                                 // 解析类----> BeanDefinition
                                 Component componentAnnotation = clazz.getDeclaredAnnotation(Component.class);
@@ -116,7 +138,13 @@ public class ApplicationContext {
                                 }
                                 beanDefinitionMap.put(beanName, beanDefinition);
                             }
-                        } catch (ClassNotFoundException e) {
+                        } catch (ClassNotFoundException | NoSuchMethodException e) {
+                            e.printStackTrace();
+                        } catch (InvocationTargetException e) {
+                            e.printStackTrace();
+                        } catch (InstantiationException e) {
+                            e.printStackTrace();
+                        } catch (IllegalAccessException e) {
                             e.printStackTrace();
                         }
                     }
